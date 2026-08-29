@@ -1,11 +1,8 @@
 import { resolveTokenKey } from "../tokens/cluster.js";
-import type { AssignedClasses, CapturedProperty, DomNode, TokenTable, UnhandledValue } from "../model/types.js";
-import { mapDiscreteValue, SCALE_PROPERTIES } from "./propertyMap.js";
+import type { AssignedClasses, CapturedProperty, DomNode, Suggestion, TokenTable, UnhandledValue } from "../model/types.js";
+import { formatArbitrary, mapDiscreteValue, SCALE_PROPERTIES } from "./propertyMap.js";
 import { collapseGroupedClasses } from "./groups.js";
-
-function arbitrary(prefix: string, rawValue: string): string {
-  return `${prefix}[${rawValue.replace(/\s+/g, "_")}]`;
-}
+import { suggestionsForNode } from "./suggestions.js";
 
 function classesForNode(node: DomNode, tokens: TokenTable, unhandled: UnhandledValue[]): string[] {
   const { classes: groupedClasses, consumed } = collapseGroupedClasses(node.style, tokens);
@@ -18,12 +15,12 @@ function classesForNode(node: DomNode, tokens: TokenTable, unhandled: UnhandledV
     if (scaleProp) {
       // Scale properties always resolve to a class, stock/generated token or arbitrary-value fallback.
       const key = resolveTokenKey(tokens, scaleProp.category, rawValue);
-      classes.push(key ? `${scaleProp.prefix}${key}` : arbitrary(scaleProp.prefix, rawValue));
+      classes.push(key ? `${scaleProp.prefix}${key}` : formatArbitrary(scaleProp.prefix, rawValue));
       continue;
     }
 
     if (property === "lineHeight") {
-      classes.push(rawValue === "normal" ? "leading-normal" : arbitrary("leading-", rawValue));
+      classes.push(rawValue === "normal" ? "leading-normal" : formatArbitrary("leading-", rawValue));
       continue;
     }
 
@@ -42,15 +39,22 @@ function classesForNode(node: DomNode, tokens: TokenTable, unhandled: UnhandledV
 }
 
 /** Pass 2: walk the tree, resolving every node's captured styles into a Tailwind class list. */
-export function assignClasses(root: DomNode, tokens: TokenTable): { classes: AssignedClasses; unhandled: UnhandledValue[] } {
+export function assignClasses(
+  root: DomNode,
+  tokens: TokenTable,
+): { classes: AssignedClasses; unhandled: UnhandledValue[]; suggestions: Suggestion[] } {
   const classes: AssignedClasses = {};
   const unhandled: UnhandledValue[] = [];
+  const suggestions: Suggestion[] = [];
 
   function visit(node: DomNode): void {
-    if (node.tag !== "#text") classes[node.id] = classesForNode(node, tokens, unhandled);
+    if (node.tag !== "#text") {
+      classes[node.id] = classesForNode(node, tokens, unhandled);
+      suggestions.push(...suggestionsForNode(node, tokens));
+    }
     for (const child of node.children) visit(child);
   }
 
   visit(root);
-  return { classes, unhandled };
+  return { classes, unhandled, suggestions };
 }

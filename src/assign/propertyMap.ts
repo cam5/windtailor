@@ -6,6 +6,11 @@ export interface ScaleProperty {
   prefix: string;
 }
 
+/** The raw-value escape hatch for a scale property with no scale match at all, e.g. "w-[437px]". */
+export function formatArbitrary(prefix: string, rawValue: string): string {
+  return `${prefix}[${rawValue.replace(/\s+/g, "_")}]`;
+}
+
 /** Properties whose value comes from a clustered/snapped numeric or color scale (the two-pass token pipeline). */
 export const SCALE_PROPERTIES: Partial<Record<CapturedProperty, ScaleProperty>> = {
   width: { category: "spacing", prefix: "w-" },

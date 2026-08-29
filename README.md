@@ -129,3 +129,58 @@ windtailor "file://$(pwd)/fixtures/simple.html" --selector "#card .cta" --out ./
 Same input, same page — but `bg-gray-900` became `bg-brand-ink` and `rounded-33` became `rounded-pill`. `#111827` happens to be the *exact* hex of Tailwind's own `gray-900`, so this is a real tie between the stock name and the custom one; windtailor prefers the custom theme's name when there's an exact match, since the point of pointing it at your own config is to get your own vocabulary back. And since `pill` now covers the button's radius directly, `tailwind.config.tokens.js` no longer needs to mint a new token for it at all — its `extend` comes back empty.
 
 `--theme-file` accepts `.js`/`.cjs`/`.mjs` too (loaded the same way Tailwind's own CLI loads your config) or `--theme-json` for the same shape inline — useful when scripting many windtailor runs without a file on disk.
+
+### Suggestions: what's worth hoisting into your theme
+
+`report.json` also carries a `suggestions` array — one entry for every value that did not resolve cleanly, so you can see where windtailor had to compromise instead of only seeing the final class. Running the stock-theme example above produces this (trimmed to the padding and radius entries):
+
+```json
+[
+  {
+    "nodeId": "0",
+    "property": "paddingTop",
+    "category": "spacing",
+    "rawValue": "9px",
+    "resolvedClass": "pt-2",
+    "kind": "clamped",
+    "distance": 1,
+    "note": "Snapped to \"pt-2\" — source value 9px was 1px off the exact scale value."
+  },
+  {
+    "nodeId": "0",
+    "property": "borderTopLeftRadius",
+    "category": "radius",
+    "rawValue": "33px",
+    "resolvedClass": "rounded-tl-33",
+    "kind": "generated",
+    "note": "Minted a new token for 33px (\"rounded-tl-33\") — already added to tailwind.config.tokens.js."
+  }
+]
+```
+
+Three kinds show up:
+
+- `clamped` — windtailor rounded the value to the nearest stock (or custom) scale entry, within tolerance. The class is real and usable, but not exact — here, `9px` padding became `pt-2` (8px). A value that keeps clamping the same way across many runs is a sign your project actually uses `9px`, not `8px`, and might deserve its own token.
+- `generated` — no scale entry was close enough, so windtailor minted a brand-new one (already written to `tailwind.config.tokens.js`, no action needed unless you want to rename it before adopting it).
+- `arbitrary` — no scale entry matched at all, so the class fell back to Tailwind's raw bracket syntax (`top-[auto]`, `leading-[1.375]`). These never came from a stock or generated token, so they're the most worth a second look.
+
+An exact match produces no entry at all — `suggestions` only lists the values that cost you something.
+
+### Tuning windtailor over multiple runs
+
+Since windtailor is meant to be called again and again as you rebuild a page, `suggestions` is there to close the loop: run windtailor, read what got clamped or minted, decide whether that's worth a real token in your config, and hand that config back in on the next run via `--theme-file`.
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer / Agent
+    participant CLI as windtailor CLI
+    participant Config as tailwind.config.js
+
+    Dev->>CLI: windtailor <url> --selector <selector>
+    CLI-->>Dev: report.json (classes + suggestions)
+    Dev->>Dev: review "suggestions" — clamped / generated / arbitrary values
+    Dev->>Config: add a recurring value as a named token
+    Dev->>CLI: windtailor <url> --selector <selector> --theme-file tailwind.config.js
+    CLI-->>Dev: report.json (now matches the named token, fewer suggestions)
+    Note over Dev,CLI: repeat for the next selector, or the next round of leftover suggestions
+```

@@ -81,9 +81,9 @@ program
         },
         stockTheme,
       );
-      const { classes, unhandled } = assignClasses(tree, tokens);
+      const { classes, unhandled, suggestions } = assignClasses(tree, tokens);
 
-      const report: ReconciliationReport = { sourceUrl: url, selector: opts.selector, tree, tokens, classes, unhandled, themeSource };
+      const report: ReconciliationReport = { sourceUrl: url, selector: opts.selector, tree, tokens, classes, unhandled, suggestions, themeSource };
 
       await mkdir(opts.out, { recursive: true });
       await writeFile(path.join(opts.out, "report.json"), renderReportJson(report));
@@ -93,6 +93,14 @@ program
       console.log(`Wrote report.json, tailwind.config.tokens.js, reconciled.html to ${opts.out}`);
       if (unhandled.length > 0) {
         console.log(`${unhandled.length} value(s) could not be mapped to a class — see "unhandled" in report.json`);
+      }
+      if (suggestions.length > 0) {
+        const clamped = suggestions.filter((s) => s.kind === "clamped").length;
+        const generated = suggestions.filter((s) => s.kind === "generated").length;
+        const arbitrary = suggestions.filter((s) => s.kind === "arbitrary").length;
+        console.log(
+          `${suggestions.length} value(s) worth reviewing for your theme (${clamped} clamped, ${generated} newly minted, ${arbitrary} arbitrary) — see "suggestions" in report.json`,
+        );
       }
     } catch (err) {
       if (err instanceof UnsupportedBackendError) {

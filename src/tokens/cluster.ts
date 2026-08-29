@@ -40,11 +40,19 @@ export function buildTokenTable(
   return {
     stockMatches: { spacing: spacing.stockMatches, radius: radius.stockMatches, fontSize: fontSize.stockMatches, color: color.stockMatches },
     generated: { spacing: spacing.generated, radius: radius.generated, fontSize: fontSize.generated, color: color.generated },
+    clamped: {
+      spacing: spacing.clampedDistance,
+      radius: radius.clampedDistance,
+      fontSize: fontSize.clampedDistance,
+      color: color.clampedDistance,
+    },
   };
 }
 
-interface LengthClusterResult {
+interface ClusterResult {
   stockMatches: Record<string, string>;
+  /** raw value -> distance from the exact scale entry it snapped to, only for non-exact matches. */
+  clampedDistance: Record<string, number>;
   generated: GeneratedToken[];
 }
 
@@ -54,16 +62,22 @@ function clusterLengths(
   tolerancePx: number,
   category: TokenCategory,
   keyFromPx: (px: number) => string,
-): LengthClusterResult {
+): ClusterResult {
   const stockMatches: Record<string, string> = {};
+  const clampedDistance: Record<string, number> = {};
   const unmatched: Array<{ raw: string; px: number }> = [];
 
   for (const raw of rawValues) {
     const px = parseLengthPx(raw);
     if (px === null) continue; // non-numeric values (auto, none, ...) aren't part of the token pipeline
     const match = nearestLength(stockScale, px, tolerancePx);
-    if (match) stockMatches[raw] = match.key;
-    else unmatched.push({ raw, px });
+    if (match) {
+      stockMatches[raw] = match.key;
+      const distance = Math.abs(match.px - px);
+      if (distance > 0) clampedDistance[raw] = distance;
+    } else {
+      unmatched.push({ raw, px });
+    }
   }
 
   unmatched.sort((a, b) => a.px - b.px);
@@ -89,11 +103,12 @@ function clusterLengths(
   }
   flush();
 
-  return { stockMatches, generated };
+  return { stockMatches, clampedDistance, generated };
 }
 
-function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolerance: number): LengthClusterResult {
+function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolerance: number): ClusterResult {
   const stockMatches: Record<string, string> = {};
+  const clampedDistance: Record<string, number> = {};
   const unmatched: Array<{ raw: string; rgb: Rgb255 }> = [];
 
   for (const raw of rawValues) {
@@ -107,8 +122,12 @@ function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolera
       const better = !best || dist < best.dist || (dist === best.dist && stock.isCustom && !best.isCustom);
       if (better) best = { key: stock.key, dist, isCustom: stock.isCustom };
     }
-    if (best && best.dist <= tolerance) stockMatches[raw] = best.key;
-    else unmatched.push({ raw, rgb });
+    if (best && best.dist <= tolerance) {
+      stockMatches[raw] = best.key;
+      if (best.dist > 0) clampedDistance[raw] = best.dist;
+    } else {
+      unmatched.push({ raw, rgb });
+    }
   }
 
   const generated: GeneratedToken[] = [];
@@ -133,7 +152,7 @@ function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolera
     });
   });
 
-  return { stockMatches, generated };
+  return { stockMatches, clampedDistance, generated };
 }
 
 function averageRgb(colors: Rgb255[]): Rgb255 {

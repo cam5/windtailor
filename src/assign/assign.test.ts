@@ -7,6 +7,7 @@ function emptyTokenTable(): TokenTable {
   return {
     stockMatches: { spacing: {}, color: {}, fontSize: {}, radius: {} },
     generated: { spacing: [], color: [], fontSize: [], radius: [] },
+    clamped: { spacing: {}, color: {}, fontSize: {}, radius: {} },
   };
 }
 

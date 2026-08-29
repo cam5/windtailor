@@ -69,6 +69,33 @@ export interface TokenTable {
   stockMatches: Record<TokenCategory, Record<string, string>>;
   /** category -> generated tokens minted for values that didn't fit the stock scale */
   generated: Record<TokenCategory, GeneratedToken[]>;
+  /**
+   * category -> (raw value -> distance from the exact scale entry it snapped to). A raw value
+   * present in stockMatches but absent here matched exactly; px for spacing/radius/fontSize,
+   * RGB distance (see color.ts) for color.
+   */
+  clamped: Record<TokenCategory, Record<string, number>>;
+}
+
+export type SuggestionKind = "clamped" | "generated" | "arbitrary";
+
+/**
+ * Pass 3 (advisory, doesn't affect output classes): flags a scale-property value that didn't
+ * resolve cleanly, so a caller can decide what's worth hoisting into their own theme for the
+ * next run — a value that got snapped to a nearby stock/custom entry ("clamped"), one that was
+ * off-scale enough to mint a brand-new token ("generated"), or one that fell back to a raw
+ * arbitrary-value class with no token at all ("arbitrary").
+ */
+export interface Suggestion {
+  nodeId: string;
+  property: CapturedProperty;
+  category?: TokenCategory;
+  rawValue: string;
+  resolvedClass: string;
+  kind: SuggestionKind;
+  /** Only set for "clamped" — see TokenTable.clamped. */
+  distance?: number;
+  note: string;
 }
 
 export interface AssignedClasses {
@@ -93,6 +120,7 @@ export interface ReconciliationReport {
   tokens: TokenTable;
   classes: AssignedClasses;
   unhandled: UnhandledValue[];
+  suggestions: Suggestion[];
   /** Where the theme scale came from: a --theme-file path, "inline" for --theme-json, or omitted for the stock Tailwind theme. */
   themeSource?: string;
 }
