@@ -30,7 +30,7 @@ const program = new Command();
 program
   .name("windtailor")
   .description("Fetch a webpage, capture a DOM node's computed styles, and reconcile them into Tailwind classes + generated design tokens.")
-  .argument("<url>", "URL of the page to fetch")
+  .argument("<url>", "URL of the page to fetch — http(s):// or a local file:// path")
   .requiredOption("-s, --selector <selector>", "CSS selector for the target node")
   .option("-o, --out <dir>", "output directory", "./out")
   .option("--cdp-endpoint <wsUrl>", "connect to an existing CDP endpoint (e.g. Kitesurf / Browser Run) instead of launching locally")
@@ -91,6 +91,12 @@ program
       await writeFile(path.join(opts.out, "reconciled.html"), renderReconciledHtml(tree, classes));
 
       console.log(`Wrote report.json, tailwind.config.tokens.js, reconciled.html to ${opts.out}`);
+      const generatedTokenCount = Object.values(tokens.generated).reduce((sum, entries) => sum + entries.length, 0);
+      if (generatedTokenCount > 0) {
+        console.log(
+          `${generatedTokenCount} new design token(s) minted in tailwind.config.tokens.js — merge its "extend" into your real Tailwind config, or those classes in reconciled.html (e.g. rounded-33) won't resolve to anything.`,
+        );
+      }
       if (unhandled.length > 0) {
         console.log(`${unhandled.length} value(s) could not be mapped to a class — see "unhandled" in report.json`);
       }
