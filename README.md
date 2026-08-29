@@ -8,6 +8,29 @@ windtailor is not a full rebuild tool. It is one small, repeatable step. You can
 
 windtailor makes one key assumption: the page already renders correctly in a browser. windtailor reads the computed styles from that render. It does not read your source CSS or your build config.
 
+## How it works
+
+```mermaid
+sequenceDiagram
+    participant Caller as Developer / Agent
+    participant CLI as windtailor CLI
+    participant Browser as Browser (via CDP)
+    participant FS as Output directory
+
+    Caller->>CLI: windtailor <url> --selector <selector>
+    CLI->>Browser: open page, connect over CDP
+    Browser-->>CLI: page ready
+    CLI->>Browser: walk DOM subtree, read computed styles
+    Browser-->>CLI: node tree + computed styles
+    CLI->>CLI: collect off-scale spacing/color/font/radius values
+    CLI->>CLI: cluster them into new design tokens
+    CLI->>CLI: assign Tailwind classes to each node
+    CLI->>FS: write report.json
+    CLI->>FS: write tailwind.config.tokens.js
+    CLI->>FS: write reconciled.html
+    FS-->>Caller: output directory
+```
+
 ## Install
 
 ```sh
