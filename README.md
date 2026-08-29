@@ -58,6 +58,24 @@ windtailor writes three files to the output directory:
 - `tailwind.config.tokens.js` — new design tokens for any value that did not fit Tailwind's stock scale.
 - `reconciled.html` — the same node, now marked up with Tailwind classes.
 
+## Use it as a library
+
+windtailor also exports the function behind the suggestions engine. A script can call it directly, without going through the CLI.
+
+```sh
+npm install windtailor
+```
+
+```js
+import { collectValues, buildTokenTable, suggestionsForNode, DEFAULT_CLUSTER_OPTIONS } from "windtailor";
+
+const collected = collectValues(tree);
+const tokens = buildTokenTable(collected, DEFAULT_CLUSTER_OPTIONS);
+const suggestions = suggestionsForNode(tree, tokens);
+```
+
+`tree` is a `DomNode` — the same shape the CLI builds from a live page. `suggestionsForNode` returns the same clamped/generated/arbitrary entries as `report.json`'s `suggestions` array, for one node at a time. Use this when your own tool already has a node tree and just wants windtailor's judgment on it, without windtailor driving the browser itself.
+
 ## Toy example
 
 This repo ships a small fixture page at `fixtures/simple.html`. It has one card with off-scale spacing and colors, so you can see windtailor's token clustering at work.
