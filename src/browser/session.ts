@@ -5,6 +5,8 @@ export interface SessionOptions {
   cdpEndpoint?: string;
   /** Path to a local browser executable. Ignored when cdpEndpoint is set. */
   executablePath?: string;
+  /** Extra headers for the CDP connection handshake (e.g. Authorization for an authenticated remote endpoint). Ignored unless cdpEndpoint is set. */
+  cdpHeaders?: Record<string, string>;
 }
 
 export class UnsupportedBackendError extends Error {}
@@ -22,7 +24,7 @@ export class BrowserSession {
 
   static async open(url: string, options: SessionOptions = {}): Promise<BrowserSession> {
     const browser = options.cdpEndpoint
-      ? await puppeteer.connect({ browserWSEndpoint: options.cdpEndpoint })
+      ? await puppeteer.connect({ browserWSEndpoint: options.cdpEndpoint, headers: options.cdpHeaders })
       : await puppeteer.launch({
           channel: options.executablePath ? undefined : "chrome",
           executablePath: options.executablePath,

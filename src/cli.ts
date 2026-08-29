@@ -12,6 +12,17 @@ import { renderReconciledHtml } from "./output/html.js";
 import { renderTailwindConfigModule } from "./output/tailwindConfig.js";
 import type { ReconciliationReport } from "./model/types.js";
 
+function parseHeaders(headerArgs: string[]): Record<string, string> | undefined {
+  if (headerArgs.length === 0) return undefined;
+  const headers: Record<string, string> = {};
+  for (const arg of headerArgs) {
+    const sep = arg.indexOf(":");
+    if (sep === -1) throw new Error(`Invalid --cdp-header "${arg}" — expected "Key: Value"`);
+    headers[arg.slice(0, sep).trim()] = arg.slice(sep + 1).trim();
+  }
+  return headers;
+}
+
 const program = new Command();
 
 program
@@ -21,6 +32,12 @@ program
   .requiredOption("-s, --selector <selector>", "CSS selector for the target node")
   .option("-o, --out <dir>", "output directory", "./out")
   .option("--cdp-endpoint <wsUrl>", "connect to an existing CDP endpoint (e.g. Kitesurf / Browser Run) instead of launching locally")
+  .option(
+    "--cdp-header <header>",
+    "extra 'Key: Value' header for the --cdp-endpoint connection (repeatable) — e.g. an Authorization bearer token",
+    (value: string, previous: string[]) => [...previous, value],
+    [] as string[],
+  )
   .option("--executable-path <path>", "path to a local browser executable (ignored with --cdp-endpoint)")
   .option("--spacing-tol <px>", "px tolerance for snapping to the stock spacing scale", parseFloat, DEFAULT_CLUSTER_OPTIONS.spacingTolerancePx)
   .option("--radius-tol <px>", "px tolerance for snapping to the stock radius scale", parseFloat, DEFAULT_CLUSTER_OPTIONS.radiusTolerancePx)
@@ -32,6 +49,7 @@ program
       session = await BrowserSession.open(url, {
         cdpEndpoint: opts.cdpEndpoint,
         executablePath: opts.executablePath,
+        cdpHeaders: parseHeaders(opts.cdpHeader),
       });
 
       const tree = await extractTree(session.page, opts.selector);

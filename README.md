@@ -20,8 +20,8 @@ sequenceDiagram
     Caller->>CLI: windtailor <url> --selector <selector>
     CLI->>Browser: open page, connect over CDP
     Browser-->>CLI: page ready
-    CLI->>Browser: walk DOM subtree, read computed styles
-    Browser-->>CLI: node tree + computed styles
+    CLI->>Browser: walk DOM subtree, read matched CSS rules + computed styles
+    Browser-->>CLI: node tree + computed styles, tagged by rule provenance
     CLI->>CLI: collect off-scale spacing/color/font/radius values
     CLI->>CLI: cluster them into new design tokens
     CLI->>CLI: assign Tailwind classes to each node
@@ -49,6 +49,7 @@ windtailor <url> --selector <css-selector> --out <output-dir>
 - `<url>` is the page to fetch.
 - `--selector` picks one DOM node on that page.
 - `--out` sets where windtailor writes its output. The default is `./out`.
+- `--cdp-endpoint` points windtailor at an existing CDP endpoint (e.g. Cloudflare's Kitesurf) instead of launching a local Chromium. `--cdp-header "Key: Value"` adds an auth header for that connection, and can repeat.
 
 windtailor writes three files to the output directory:
 
@@ -66,7 +67,7 @@ Run windtailor against it:
 windtailor "file://$(pwd)/fixtures/simple.html" --selector "#card" --out ./out
 ```
 
-Open `out/reconciled.html` to see the card rebuilt with Tailwind classes. Open `out/tailwind.config.tokens.js` to see the new spacing and radius tokens windtailor generated for the fixture's off-scale values.
+Open `out/reconciled.html` to see the card rebuilt with Tailwind classes. Open `out/tailwind.config.tokens.js` to see the new radius token windtailor generated for the fixture's one off-scale value (the button's `33px` corner radius).
 
 ### Before and after
 
@@ -89,13 +90,11 @@ The fixture's button has hand-picked, off-scale values:
 windtailor reads the rendered result and rewrites it as Tailwind classes:
 
 ```html
-<div
-  class="inline-block static top-[auto] right-[auto] bottom-[auto] left-[auto] w-14.5547 h-4 mt-3.5 mr-0 mb-0 ml-0 pt-2 pr-4 pb-2 pl-4 text-base font-normal leading-normal text-white text-start bg-gray-900 border-t-0 border-r-0 border-b-0 border-l-0 border-t-white border-r-white border-b-white border-l-white rounded-tl-33 rounded-tr-33 rounded-br-33 rounded-bl-33 opacity-100"
->
+<div class="inline-block mt-3.5 pt-2 pr-4 pb-2 pl-4 text-white bg-gray-900 rounded-tl-33 rounded-tr-33 rounded-br-33 rounded-bl-33">
   Click me
 </div>
 ```
 
 `9px 17px` padding becomes `pt-2 pr-4 pb-2 pl-4`. `#111827` becomes `bg-gray-900`. The odd `33px` radius becomes `rounded-tl-33`, a new token minted just for that value.
 
-**A known limitation**: windtailor writes a class for every computed property today, not only the ones the page's own CSS declared. That is why the output above also carries classes for untouched defaults, like `top-[auto]` and the zero-width border colors. Telling "declared by page CSS" apart from "browser default" is open work — see the project notes.
+windtailor only writes a class for a property when a real CSS rule backs it — the page's own stylesheet, or a genuine browser default like `display: block` on a `<div>`. A property nobody ever set, like this button's `position` or `width`, is left alone rather than frozen into a class.
