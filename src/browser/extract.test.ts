@@ -5,12 +5,15 @@ import { extractTree } from "./extract.js";
 
 // Locally this resolves the system Chrome via `channel`. CI has no such install, so it sets
 // CHROME_PATH (from browser-actions/setup-chrome) to point at an explicit binary instead.
+// --no-sandbox is needed on GitHub's runners, which lack the user-namespace privileges Chrome's
+// sandbox requires; safe here since this browser only ever renders our own trusted fixture HTML.
 async function withPage(html: string, run: (page: Page) => Promise<void>): Promise<void> {
   const chromePath = process.env.CHROME_PATH;
   const browser = await puppeteer.launch({
     channel: chromePath ? undefined : "chrome",
     executablePath: chromePath,
     headless: true,
+    args: chromePath ? ["--no-sandbox", "--disable-setuid-sandbox"] : [],
   });
   try {
     const page = (await browser.pages())[0] ?? (await browser.newPage());
