@@ -1,0 +1,27 @@
+{
+  "name": "windtailor",
+  "version": "0.1.0",
+  "description": "Fetch a webpage, capture a DOM node's computed styles, and reconcile them into a Tailwind design-token system.",
+  "type": "module",
+  "bin": {
+    "windtailor": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "node --test --import tsx dist-test/**/*.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "culori": "^4.0.1",
+    "puppeteer-core": "^24.10.0",
+    "tailwindcss": "^3.4.14"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
