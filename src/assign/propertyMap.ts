@@ -65,6 +65,17 @@ const DISPLAY_MAP: Record<string, string> = {
   none: "hidden",
   contents: "contents",
   table: "table",
+  "inline-table": "inline-table",
+  "table-caption": "table-caption",
+  "table-cell": "table-cell",
+  "table-column": "table-column",
+  "table-column-group": "table-column-group",
+  "table-footer-group": "table-footer-group",
+  "table-header-group": "table-header-group",
+  "table-row-group": "table-row-group",
+  "table-row": "table-row",
+  "flow-root": "flow-root",
+  "list-item": "list-item",
 };
 
 const POSITION_MAP: Record<string, string> = {

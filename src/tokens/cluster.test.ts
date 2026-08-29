@@ -46,3 +46,20 @@ test("keeps the first stock key on a tie between two stock colors (no custom ent
 
   assert.equal(tokens.stockMatches.color["#111827"], "gray-900");
 });
+
+test("mints a fresh custom color name past an existing custom-N from a passed-in --theme-file, instead of colliding with it", () => {
+  const stockTheme: StockTheme = {
+    spacing: [],
+    fontSize: [],
+    radius: [],
+    colors: [{ key: "custom-1", rgb: { r: 94, g: 27, b: 2 }, isCustom: true }], // #5e1b02, minted by a prior run
+  };
+  const collected = emptyCollected();
+  collected.color.add("#333232"); // a genuinely new color, unseen by the prior run
+
+  const tokens = buildTokenTable(collected, DEFAULT_CLUSTER_OPTIONS, stockTheme);
+
+  assert.equal(tokens.generated.color.length, 1);
+  assert.notEqual(tokens.generated.color[0].key, "custom-1");
+  assert.equal(tokens.generated.color[0].key, "custom-2");
+});

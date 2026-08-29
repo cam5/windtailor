@@ -67,13 +67,22 @@ test("maps a discrete-value property via its fixed lookup table", () => {
   assert.deepEqual(classes["0"], ["inline-block", "relative"]);
 });
 
+test("maps display: table-cell to Tailwind's core table-cell utility instead of unhandled", () => {
+  const tokens = emptyTokenTable();
+
+  const { classes, unhandled } = assignClasses(node({ display: "table-cell" }), tokens);
+
+  assert.deepEqual(classes["0"], ["table-cell"]);
+  assert.deepEqual(unhandled, []);
+});
+
 test("records an unmappable discrete value in the unhandled ledger instead of dropping it", () => {
   const tokens = emptyTokenTable();
 
-  const { classes, unhandled } = assignClasses(node({ display: "flow-root" }), tokens);
+  const { classes, unhandled } = assignClasses(node({ display: "ruby" }), tokens);
 
   assert.deepEqual(classes["0"], []);
-  assert.deepEqual(unhandled, [{ nodeId: "0", property: "display", rawValue: "flow-root" }]);
+  assert.deepEqual(unhandled, [{ nodeId: "0", property: "display", rawValue: "ruby" }]);
 });
 
 test("a node with no captured style produces an empty class list and no unhandled entries", () => {

@@ -143,16 +143,33 @@ function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolera
     cluster.centroid = averageRgb(cluster.members.map((m) => m.rgb));
   }
 
-  clusters.forEach((cluster, index) => {
+  let nextIndex = nextCustomColorIndex(stockColors);
+  for (const cluster of clusters) {
     generated.push({
       category: "color",
-      key: `custom-${index + 1}`,
+      key: `custom-${nextIndex++}`,
       value: toHex(cluster.centroid),
       sourceValues: cluster.members.map((m) => m.raw),
     });
-  });
+  }
 
   return { stockMatches, clampedDistance, generated };
+}
+
+/**
+ * Freshly-minted colors are named `custom-N`. When a --theme-file from a prior run is passed back
+ * in, its own `custom-N` entries land in stockColors alongside Tailwind's stock palette, so a naive
+ * `index + 1` restart here would reissue an already-used name for a genuinely new color and
+ * silently collide with (and overwrite) that earlier mapping. Continuing the counter past the
+ * highest `custom-N` already present keeps names unique across runs that accumulate one theme file.
+ */
+function nextCustomColorIndex(stockColors: StockColor[]): number {
+  let max = 0;
+  for (const entry of stockColors) {
+    const match = /^custom-(\d+)$/.exec(entry.key);
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return max + 1;
 }
 
 function averageRgb(colors: Rgb255[]): Rgb255 {
