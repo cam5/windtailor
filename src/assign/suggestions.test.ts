@@ -70,7 +70,7 @@ test("a value that minted a brand-new token is flagged as generated", () => {
       resolvedClass: "rounded-tl-33",
       kind: "generated",
       distance: undefined,
-      note: 'Minted a new token for 33px ("rounded-tl-33") — already added to tailwind.config.tokens.js.',
+      note: 'Minted a new token for 33px ("rounded-tl-33") — written to this run\'s tailwind.config.tokens.js, not your own config.',
     },
   ]);
 });

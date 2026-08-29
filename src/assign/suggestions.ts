@@ -28,7 +28,7 @@ function noteFor(category: TokenCategory | undefined, kind: SuggestionKind, rawV
         ? `Snapped to "${resolvedClass}" — source color ${rawValue} was ${distance!.toFixed(1)} RGB units from an exact match.`
         : `Snapped to "${resolvedClass}" — source value ${rawValue} was ${distance}px off the exact scale value.`;
     case "generated":
-      return `Minted a new token for ${rawValue} ("${resolvedClass}") — already added to tailwind.config.tokens.js.`;
+      return `Minted a new token for ${rawValue} ("${resolvedClass}") — written to this run's tailwind.config.tokens.js, not your own config.`;
     case "arbitrary":
       return `No scale value matched ${rawValue} — emitted as a raw arbitrary-value class.`;
   }

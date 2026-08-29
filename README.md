@@ -153,7 +153,7 @@ Same input, same page — but `bg-gray-900` became `bg-brand-ink` and `rounded-3
     "rawValue": "33px",
     "resolvedClass": "rounded-tl-33",
     "kind": "generated",
-    "note": "Minted a new token for 33px (\"rounded-tl-33\") — already added to tailwind.config.tokens.js."
+    "note": "Minted a new token for 33px (\"rounded-tl-33\") — written to this run's tailwind.config.tokens.js, not your own config."
   }
 ]
 ```
@@ -161,7 +161,7 @@ Same input, same page — but `bg-gray-900` became `bg-brand-ink` and `rounded-3
 Three kinds show up:
 
 - `clamped` — windtailor rounded the value to the nearest stock (or custom) scale entry, within tolerance. The class is real and usable, but not exact — here, `9px` padding became `pt-2` (8px). A value that keeps clamping the same way across many runs is a sign your project actually uses `9px`, not `8px`, and might deserve its own token.
-- `generated` — no scale entry was close enough, so windtailor minted a brand-new one (already written to `tailwind.config.tokens.js`, no action needed unless you want to rename it before adopting it).
+- `generated` — no scale entry was close enough, so windtailor minted a brand-new one. This is the same token that lands in the `--out` directory's `tailwind.config.tokens.js` — a standalone file, separate from any `--theme-file` you passed in. windtailor never reads from or writes to your own config; it's on you to copy the token over (or `require()` the file and spread its `extend` into yours) once you decide it's worth keeping.
 - `arbitrary` — no scale entry matched at all, so the class fell back to Tailwind's raw bracket syntax (`top-[auto]`, `leading-[1.375]`). These never came from a stock or generated token, so they're the most worth a second look.
 
 An exact match produces no entry at all — `suggestions` only lists the values that cost you something.
