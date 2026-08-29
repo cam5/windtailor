@@ -1,15 +1,19 @@
 import { resolveTokenKey } from "../tokens/cluster.js";
 import type { AssignedClasses, CapturedProperty, DomNode, TokenTable, UnhandledValue } from "../model/types.js";
 import { mapDiscreteValue, SCALE_PROPERTIES } from "./propertyMap.js";
+import { collapseGroupedClasses } from "./groups.js";
 
 function arbitrary(prefix: string, rawValue: string): string {
   return `${prefix}[${rawValue.replace(/\s+/g, "_")}]`;
 }
 
 function classesForNode(node: DomNode, tokens: TokenTable, unhandled: UnhandledValue[]): string[] {
-  const classes: string[] = [];
+  const { classes: groupedClasses, consumed } = collapseGroupedClasses(node.style, tokens);
+  const classes: string[] = [...groupedClasses];
 
   for (const [property, rawValue] of Object.entries(node.style)) {
+    if (consumed.has(property as CapturedProperty)) continue;
+
     const scaleProp = SCALE_PROPERTIES[property as CapturedProperty];
     if (scaleProp) {
       // Scale properties always resolve to a class, stock/generated token or arbitrary-value fallback.

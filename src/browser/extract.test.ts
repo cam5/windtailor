@@ -3,8 +3,15 @@ import assert from "node:assert/strict";
 import puppeteer, { type Page } from "puppeteer-core";
 import { extractTree } from "./extract.js";
 
+// Locally this resolves the system Chrome via `channel`. CI has no such install, so it sets
+// CHROME_PATH (from browser-actions/setup-chrome) to point at an explicit binary instead.
 async function withPage(html: string, run: (page: Page) => Promise<void>): Promise<void> {
-  const browser = await puppeteer.launch({ channel: "chrome", headless: true });
+  const chromePath = process.env.CHROME_PATH;
+  const browser = await puppeteer.launch({
+    channel: chromePath ? undefined : "chrome",
+    executablePath: chromePath,
+    headless: true,
+  });
   try {
     const page = (await browser.pages())[0] ?? (await browser.newPage());
     await page.setContent(html);

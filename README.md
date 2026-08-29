@@ -90,11 +90,9 @@ The fixture's button has hand-picked, off-scale values:
 windtailor reads the rendered result and rewrites it as Tailwind classes:
 
 ```html
-<div class="inline-block mt-3.5 pt-2 pr-4 pb-2 pl-4 text-white bg-gray-900 rounded-tl-33 rounded-tr-33 rounded-br-33 rounded-bl-33">
-  Click me
-</div>
+<div class="py-2 px-4 rounded-33 inline-block mt-3.5 text-white bg-gray-900">Click me</div>
 ```
 
-`9px 17px` padding becomes `pt-2 pr-4 pb-2 pl-4`. `#111827` becomes `bg-gray-900`. The odd `33px` radius becomes `rounded-tl-33`, a new token minted just for that value.
+`9px 17px` padding becomes `py-2 px-4` — one class per axis, not four, since top/bottom agree and left/right agree. `#111827` becomes `bg-gray-900`. The odd `33px` radius is the same on all four corners, so it collapses to one `rounded-33` class (a new token minted just for that value) instead of four `rounded-tl-33`/`rounded-tr-33`/... duplicates.
 
-windtailor only writes a class for a property when a real CSS rule backs it — the page's own stylesheet, or a genuine browser default like `display: block` on a `<div>`. A property nobody ever set, like this button's `position` or `width`, is left alone rather than frozen into a class.
+windtailor only writes a class for a property when a real CSS rule backs it — the page's own stylesheet, or a genuine browser default like `display: block` on a `<div>`. A property nobody ever set, like this button's `position` or `width`, is left alone rather than frozen into a class. And wherever all four sides (or corners) of a box-model property agree, windtailor collapses them into Tailwind's shorter `m-`/`mx-`/`my-` (and `rounded-`/`rounded-t-`/`rounded-l-`/...) form instead of always emitting four near-duplicate classes.

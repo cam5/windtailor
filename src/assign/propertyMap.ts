@@ -87,6 +87,13 @@ const BORDER_WIDTH_SCALE: Array<{ px: number; suffix: string }> = [
   { px: 8, suffix: "-8" },
 ];
 
+/** Snaps a border-width value to the nearest stock class suffix, e.g. "2px" -> "-2", "1px" -> "" (Tailwind's bare `border`/`border-t`/... means 1px). */
+export function nearestBorderWidthSuffix(rawValue: string): string | null {
+  const px = parseFloat(rawValue);
+  if (Number.isNaN(px)) return null;
+  return BORDER_WIDTH_SCALE.reduce((best, entry) => (Math.abs(entry.px - px) < Math.abs(best.px - px) ? entry : best)).suffix;
+}
+
 const OPACITY_SCALE = [0, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 100];
 
 const BORDER_SIDE_PREFIX: Partial<Record<CapturedProperty, string>> = {
@@ -121,12 +128,8 @@ export function mapDiscreteValue(property: CapturedProperty, rawValue: string): 
     case "borderRightWidth":
     case "borderBottomWidth":
     case "borderLeftWidth": {
-      const px = parseFloat(rawValue);
-      if (Number.isNaN(px)) return null;
-      const nearest = BORDER_WIDTH_SCALE.reduce((best, entry) =>
-        Math.abs(entry.px - px) < Math.abs(best.px - px) ? entry : best,
-      );
-      return `${BORDER_SIDE_PREFIX[property]}${nearest.suffix}`;
+      const suffix = nearestBorderWidthSuffix(rawValue);
+      return suffix === null ? null : `${BORDER_SIDE_PREFIX[property]}${suffix}`;
     }
     default:
       return null;
