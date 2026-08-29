@@ -93,4 +93,6 @@ export interface ReconciliationReport {
   tokens: TokenTable;
   classes: AssignedClasses;
   unhandled: UnhandledValue[];
+  /** Where the theme scale came from: a --theme-file path, "inline" for --theme-json, or omitted for the stock Tailwind theme. */
+  themeSource?: string;
 }

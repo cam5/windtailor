@@ -1,0 +1,11 @@
+{
+  "extend": {
+    "colors": {
+      "brand-ink": "#111827",
+      "brand-blue": "#3a81f5"
+    },
+    "borderRadius": {
+      "pill": "33px"
+    }
+  }
+}

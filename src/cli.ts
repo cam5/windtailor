@@ -6,6 +6,8 @@ import { BrowserSession, UnsupportedBackendError } from "./browser/session.js";
 import { extractTree } from "./browser/extract.js";
 import { collectValues } from "./tokens/collect.js";
 import { buildTokenTable, DEFAULT_CLUSTER_OPTIONS } from "./tokens/cluster.js";
+import { loadThemeFromFile, loadThemeFromJson } from "./tokens/themeConfig.js";
+import type { StockTheme } from "./tokens/stockTheme.js";
 import { assignClasses } from "./assign/assign.js";
 import { renderReportJson } from "./output/report.js";
 import { renderReconciledHtml } from "./output/html.js";
@@ -39,6 +41,8 @@ program
     [] as string[],
   )
   .option("--executable-path <path>", "path to a local browser executable (ignored with --cdp-endpoint)")
+  .option("--theme-file <path>", "load a custom Tailwind theme from a .js/.cjs/.mjs/.json config file (extend or full theme) instead of stock Tailwind")
+  .option("--theme-json <json>", "inline JSON for a custom Tailwind theme (same shape as --theme-file); mutually exclusive with --theme-file")
   .option("--spacing-tol <px>", "px tolerance for snapping to the stock spacing scale", parseFloat, DEFAULT_CLUSTER_OPTIONS.spacingTolerancePx)
   .option("--radius-tol <px>", "px tolerance for snapping to the stock radius scale", parseFloat, DEFAULT_CLUSTER_OPTIONS.radiusTolerancePx)
   .option("--font-size-tol <px>", "px tolerance for snapping to the stock font-size scale", parseFloat, DEFAULT_CLUSTER_OPTIONS.fontSizeTolerancePx)
@@ -56,16 +60,30 @@ program
       await session.close();
       session = undefined;
 
+      if (opts.themeFile && opts.themeJson) {
+        throw new Error("Pass only one of --theme-file / --theme-json, not both.");
+      }
+      const stockTheme: StockTheme | undefined = opts.themeFile
+        ? await loadThemeFromFile(opts.themeFile)
+        : opts.themeJson
+          ? loadThemeFromJson(opts.themeJson)
+          : undefined;
+      const themeSource: string | undefined = opts.themeFile ?? (opts.themeJson ? "inline" : undefined);
+
       const collected = collectValues(tree);
-      const tokens = buildTokenTable(collected, {
-        spacingTolerancePx: opts.spacingTol,
-        radiusTolerancePx: opts.radiusTol,
-        fontSizeTolerancePx: opts.fontSizeTol,
-        colorTolerance: opts.colorTol,
-      });
+      const tokens = buildTokenTable(
+        collected,
+        {
+          spacingTolerancePx: opts.spacingTol,
+          radiusTolerancePx: opts.radiusTol,
+          fontSizeTolerancePx: opts.fontSizeTol,
+          colorTolerance: opts.colorTol,
+        },
+        stockTheme,
+      );
       const { classes, unhandled } = assignClasses(tree, tokens);
 
-      const report: ReconciliationReport = { sourceUrl: url, selector: opts.selector, tree, tokens, classes, unhandled };
+      const report: ReconciliationReport = { sourceUrl: url, selector: opts.selector, tree, tokens, classes, unhandled, themeSource };
 
       await mkdir(opts.out, { recursive: true });
       await writeFile(path.join(opts.out, "report.json"), renderReportJson(report));

@@ -50,6 +50,7 @@ windtailor <url> --selector <css-selector> --out <output-dir>
 - `--selector` picks one DOM node on that page.
 - `--out` sets where windtailor writes its output. The default is `./out`.
 - `--cdp-endpoint` points windtailor at an existing CDP endpoint (e.g. Cloudflare's Kitesurf) instead of launching a local Chromium. `--cdp-header "Key: Value"` adds an auth header for that connection, and can repeat.
+- `--theme-file <path>` loads a custom Tailwind theme from a `.js`/`.cjs`/`.mjs`/`.json` config file — point it at a real project `tailwind.config.js`, or a minimal file with just a `theme`/`extend` object. `--theme-json <json>` takes the same shape inline instead. Pass only one.
 
 windtailor writes three files to the output directory:
 
@@ -96,3 +97,35 @@ windtailor reads the rendered result and rewrites it as Tailwind classes:
 `9px 17px` padding becomes `py-2 px-4` — one class per axis, not four, since top/bottom agree and left/right agree. `#111827` becomes `bg-gray-900`. The odd `33px` radius is the same on all four corners, so it collapses to one `rounded-33` class (a new token minted just for that value) instead of four `rounded-tl-33`/`rounded-tr-33`/... duplicates.
 
 windtailor only writes a class for a property when a real CSS rule backs it — the page's own stylesheet, or a genuine browser default like `display: block` on a `<div>`. A property nobody ever set, like this button's `position` or `width`, is left alone rather than frozen into a class. And wherever all four sides (or corners) of a box-model property agree, windtailor collapses them into Tailwind's shorter `m-`/`mx-`/`my-` (and `rounded-`/`rounded-t-`/`rounded-l-`/...) form instead of always emitting four near-duplicate classes.
+
+### Before and after (with a custom Tailwind config)
+
+If you run windtailor over and over against the same project, you usually want it to snap to *that project's own* design tokens, not generic Tailwind ones. `--theme-file` points windtailor at a theme — a real `tailwind.config.js`, or a minimal file like this repo's `fixtures/custom-theme.json`:
+
+```json
+{
+  "extend": {
+    "colors": {
+      "brand-ink": "#111827",
+      "brand-blue": "#3a81f5"
+    },
+    "borderRadius": {
+      "pill": "33px"
+    }
+  }
+}
+```
+
+Run the same button through windtailor again, this time with that file:
+
+```sh
+windtailor "file://$(pwd)/fixtures/simple.html" --selector "#card .cta" --out ./out --theme-file fixtures/custom-theme.json
+```
+
+```html
+<div class="py-2 px-4 rounded-pill inline-block mt-3.5 text-white bg-brand-ink">Click me</div>
+```
+
+Same input, same page — but `bg-gray-900` became `bg-brand-ink` and `rounded-33` became `rounded-pill`. `#111827` happens to be the *exact* hex of Tailwind's own `gray-900`, so this is a real tie between the stock name and the custom one; windtailor prefers the custom theme's name when there's an exact match, since the point of pointing it at your own config is to get your own vocabulary back. And since `pill` now covers the button's radius directly, `tailwind.config.tokens.js` no longer needs to mint a new token for it at all — its `extend` comes back empty.
+
+`--theme-file` accepts `.js`/`.cjs`/`.mjs` too (loaded the same way Tailwind's own CLI loads your config) or `--theme-json` for the same shape inline — useful when scripting many windtailor runs without a file on disk.

@@ -1,6 +1,6 @@
 import type { GeneratedToken, TokenCategory, TokenTable } from "../model/types.js";
 import { parseColor, colorDistance, toHex, type Rgb255 } from "./color.js";
-import { loadStockTheme, nearestLength, type StockLength } from "./stockTheme.js";
+import { loadStockTheme, nearestLength, type StockColor, type StockLength, type StockTheme } from "./stockTheme.js";
 import { parseLengthPx, pxToRem, trimTrailingZeros } from "./units.js";
 import type { CollectedValues } from "./collect.js";
 
@@ -18,9 +18,13 @@ export const DEFAULT_CLUSTER_OPTIONS: ClusterOptions = {
   colorTolerance: 24,
 };
 
-/** Pass 1: snap observed values to Tailwind's stock scale where they fit, cluster the rest into new tokens. */
-export function buildTokenTable(collected: CollectedValues, options: ClusterOptions = DEFAULT_CLUSTER_OPTIONS): TokenTable {
-  const stock = loadStockTheme();
+/** Pass 1: snap observed values to the stock/custom theme scale where they fit, cluster the rest into new tokens. */
+export function buildTokenTable(
+  collected: CollectedValues,
+  options: ClusterOptions = DEFAULT_CLUSTER_OPTIONS,
+  stockTheme: StockTheme = loadStockTheme(),
+): TokenTable {
+  const stock = stockTheme;
 
   const spacing = clusterLengths(collected.spacing, stock.spacing, options.spacingTolerancePx, "spacing", (px) =>
     trimTrailingZeros(px / 4),
@@ -88,17 +92,20 @@ function clusterLengths(
   return { stockMatches, generated };
 }
 
-function clusterColors(rawValues: Set<string>, stockColors: { key: string; rgb: Rgb255 }[], tolerance: number): LengthClusterResult {
+function clusterColors(rawValues: Set<string>, stockColors: StockColor[], tolerance: number): LengthClusterResult {
   const stockMatches: Record<string, string> = {};
   const unmatched: Array<{ raw: string; rgb: Rgb255 }> = [];
 
   for (const raw of rawValues) {
     const rgb = parseColor(raw);
     if (!rgb) continue;
-    let best: { key: string; dist: number } | null = null;
+    let best: { key: string; dist: number; isCustom: boolean } | null = null;
     for (const stock of stockColors) {
       const dist = colorDistance(rgb, stock.rgb);
-      if (!best || dist < best.dist) best = { key: stock.key, dist };
+      // On an exact tie, a custom (caller-supplied) color wins over a stock one -- see the
+      // matching comment on nearestLength in stockTheme.ts.
+      const better = !best || dist < best.dist || (dist === best.dist && stock.isCustom && !best.isCustom);
+      if (better) best = { key: stock.key, dist, isCustom: stock.isCustom };
     }
     if (best && best.dist <= tolerance) stockMatches[raw] = best.key;
     else unmatched.push({ raw, rgb });
