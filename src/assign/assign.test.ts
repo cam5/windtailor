@@ -32,6 +32,33 @@ test("falls back to an arbitrary-value class when a scale property matches no to
   assert.deepEqual(classes["0"], ["mt-[13px]"]);
 });
 
+test("a negative generated margin key moves the sign outside the class (-mt-1.25, not mt--1.25)", () => {
+  const tokens = emptyTokenTable();
+  tokens.generated.spacing.push({ category: "spacing", key: "-1.25", value: "-0.3125rem", sourceValues: ["-5px"] });
+
+  const { classes } = assignClasses(node({ marginTop: "-5px" }), tokens);
+
+  assert.deepEqual(classes["0"], ["-mt-1.25"]);
+});
+
+test("a negative generated inset key moves the sign outside the class (-top-1.25, not top--1.25)", () => {
+  const tokens = emptyTokenTable();
+  tokens.generated.spacing.push({ category: "spacing", key: "-1.25", value: "-0.3125rem", sourceValues: ["-5px"] });
+
+  const { classes } = assignClasses(node({ top: "-5px" }), tokens);
+
+  assert.deepEqual(classes["0"], ["-top-1.25"]);
+});
+
+test("width never goes negative in real CSS, so a (hypothetical) negative key is left untouched", () => {
+  const tokens = emptyTokenTable();
+  tokens.stockMatches.spacing["-5px"] = "-1.25";
+
+  const { classes } = assignClasses(node({ width: "-5px" }), tokens);
+
+  assert.deepEqual(classes["0"], ["w--1.25"]);
+});
+
 test("maps a discrete-value property via its fixed lookup table", () => {
   const tokens = emptyTokenTable();
 

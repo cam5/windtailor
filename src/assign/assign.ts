@@ -1,6 +1,6 @@
 import { resolveTokenKey } from "../tokens/cluster.js";
 import type { AssignedClasses, CapturedProperty, DomNode, Suggestion, TokenTable, UnhandledValue } from "../model/types.js";
-import { formatArbitrary, mapDiscreteValue, SCALE_PROPERTIES } from "./propertyMap.js";
+import { formatArbitrary, formatScaleClass, mapDiscreteValue, SCALE_PROPERTIES } from "./propertyMap.js";
 import { collapseGroupedClasses } from "./groups.js";
 import { suggestionsForNode } from "./suggestions.js";
 
@@ -15,7 +15,11 @@ function classesForNode(node: DomNode, tokens: TokenTable, unhandled: UnhandledV
     if (scaleProp) {
       // Scale properties always resolve to a class, stock/generated token or arbitrary-value fallback.
       const key = resolveTokenKey(tokens, scaleProp.category, rawValue);
-      classes.push(key ? `${scaleProp.prefix}${key}` : formatArbitrary(scaleProp.prefix, rawValue));
+      if (key) {
+        classes.push(scaleProp.signAware ? formatScaleClass(scaleProp.prefix, key) : `${scaleProp.prefix}${key}`);
+      } else {
+        classes.push(formatArbitrary(scaleProp.prefix, rawValue));
+      }
       continue;
     }
 

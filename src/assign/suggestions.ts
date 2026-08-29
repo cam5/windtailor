@@ -1,5 +1,5 @@
 import type { CapturedProperty, DomNode, Suggestion, SuggestionKind, TokenCategory, TokenTable } from "../model/types.js";
-import { formatArbitrary, SCALE_PROPERTIES } from "./propertyMap.js";
+import { formatArbitrary, formatScaleClass, SCALE_PROPERTIES } from "./propertyMap.js";
 
 interface Classification {
   resolvedKey: string;
@@ -49,7 +49,11 @@ export function suggestionsForNode(node: DomNode, tokens: TokenTable): Suggestio
       const result = classifyScaleValue(scaleProp.category, rawValue, tokens);
       if (result) {
         const resolvedClass =
-          result.kind === "arbitrary" ? formatArbitrary(scaleProp.prefix, rawValue) : `${scaleProp.prefix}${result.resolvedKey}`;
+          result.kind === "arbitrary"
+            ? formatArbitrary(scaleProp.prefix, rawValue)
+            : scaleProp.signAware
+              ? formatScaleClass(scaleProp.prefix, result.resolvedKey)
+              : `${scaleProp.prefix}${result.resolvedKey}`;
         suggestions.push({
           nodeId: node.id,
           property: property as CapturedProperty,

@@ -55,6 +55,15 @@ test("a clamped color match reports RGB distance, not px", () => {
   assert.match(suggestion.note, /RGB units/);
 });
 
+test("a negative generated margin key reports a sign-aware resolvedClass (-mt-1.25, not mt--1.25)", () => {
+  const tokens = emptyTokenTable();
+  tokens.generated.spacing.push({ category: "spacing", key: "-1.25", value: "-0.3125rem", sourceValues: ["-5px"] });
+
+  const [suggestion] = suggestionsForNode(node({ marginTop: "-5px" }), tokens);
+
+  assert.equal(suggestion.resolvedClass, "-mt-1.25");
+});
+
 test("a value that minted a brand-new token is flagged as generated", () => {
   const tokens = emptyTokenTable();
   tokens.generated.radius.push({ category: "radius", key: "33", value: "2.0625rem", sourceValues: ["33px"] });

@@ -1,5 +1,5 @@
 import { resolveTokenKey } from "../tokens/cluster.js";
-import { nearestBorderWidthSuffix } from "./propertyMap.js";
+import { formatScaleClass, nearestBorderWidthSuffix } from "./propertyMap.js";
 import type { CapturedProperty, StyleRecord, TokenCategory, TokenTable } from "../model/types.js";
 
 function arbitraryFragment(rawValue: string): string {
@@ -19,6 +19,8 @@ interface XYGroup {
   allPrefix: string;
   xPrefix: string;
   yPrefix: string;
+  /** See ScaleProperty.signAware in propertyMap.ts — true only for margin/inset, never padding/border. */
+  signAware?: boolean;
 }
 
 interface CornerGroup {
@@ -50,6 +52,7 @@ function buildGroups(tokens: TokenTable): Group[] {
       allPrefix: "m-",
       xPrefix: "mx-",
       yPrefix: "my-",
+      signAware: true,
     },
     {
       kind: "xy",
@@ -66,6 +69,7 @@ function buildGroups(tokens: TokenTable): Group[] {
       allPrefix: "inset-",
       xPrefix: "inset-x-",
       yPrefix: "inset-y-",
+      signAware: true,
     },
     {
       kind: "xy",
@@ -106,11 +110,13 @@ function collapseXY(group: XYGroup, style: StyleRecord): { classes: string[]; co
   const fl = group.resolveFragment(style[left]!);
   if (ft === null || fr === null || fb === null || fl === null) return null;
 
+  const format = (prefix: string, fragment: string) => (group.signAware ? formatScaleClass(prefix, fragment) : `${prefix}${fragment}`);
+
   if (ft === fr && fr === fb && fb === fl) {
-    return { classes: [`${group.allPrefix}${ft}`], consumed: group.members };
+    return { classes: [format(group.allPrefix, ft)], consumed: group.members };
   }
   if (ft === fb && fr === fl) {
-    return { classes: [`${group.yPrefix}${ft}`, `${group.xPrefix}${fr}`], consumed: group.members };
+    return { classes: [format(group.yPrefix, ft), format(group.xPrefix, fr)], consumed: group.members };
   }
   return null;
 }

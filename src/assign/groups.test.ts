@@ -27,6 +27,31 @@ test("collapses a margin quad to a single class when all four sides agree", () =
   assert.deepEqual(classes["0"], ["m-3"]);
 });
 
+test("collapses a negative margin quad to a single sign-aware class (-m-1.25, not m--1.25)", () => {
+  const tokens = emptyTokenTable();
+  tokens.stockMatches.spacing["-5px"] = "-1.25";
+
+  const { classes } = assignClasses(
+    node({ marginTop: "-5px", marginRight: "-5px", marginBottom: "-5px", marginLeft: "-5px" }),
+    tokens,
+  );
+
+  assert.deepEqual(classes["0"], ["-m-1.25"]);
+});
+
+test("collapses a negative inset quad to sign-aware -inset-y-/-inset-x- classes when axes agree but differ from each other", () => {
+  const tokens = emptyTokenTable();
+  tokens.stockMatches.spacing["-5px"] = "-1.25";
+  tokens.stockMatches.spacing["7px"] = "1.75";
+
+  const { classes } = assignClasses(
+    node({ top: "-5px", right: "7px", bottom: "-5px", left: "7px" }),
+    tokens,
+  );
+
+  assert.deepEqual(classes["0"], ["-inset-y-1.25", "inset-x-1.75"]);
+});
+
 test("collapses a padding quad to px/py when top=bottom and left=right but the axes differ", () => {
   const tokens = emptyTokenTable();
   tokens.stockMatches.spacing["9px"] = "2";

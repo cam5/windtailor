@@ -4,6 +4,14 @@ export interface ScaleProperty {
   category: TokenCategory;
   /** Utility class prefix this property's resolved token key gets appended to, e.g. "mt-" + "3.5" -> "mt-3.5". */
   prefix: string;
+  /**
+   * True only for properties that can genuinely go negative in real CSS (margin, inset) — never
+   * padding/width/height/font-size/color/radius. A generated token minted from a negative
+   * computed value (e.g. "top: -5px") gets a negative key ("-1.25"); Tailwind's negative
+   * utilities move that sign in front of the whole class ("-top-1.25"), not inline after the
+   * prefix ("top--1.25", which isn't a real Tailwind class and silently fails to resolve).
+   */
+  signAware?: boolean;
 }
 
 /** The raw-value escape hatch for a scale property with no scale match at all, e.g. "w-[437px]". */
@@ -11,22 +19,28 @@ export function formatArbitrary(prefix: string, rawValue: string): string {
   return `${prefix}[${rawValue.replace(/\s+/g, "_")}]`;
 }
 
+/** See ScaleProperty.signAware. `key` may be a real token key (possibly negative) or an arbitrary-value bracket fragment (left untouched — Tailwind writes the sign inside the brackets there, e.g. "[-17px]"). */
+export function formatScaleClass(prefix: string, key: string): string {
+  if (key.startsWith("[")) return `${prefix}${key}`;
+  return key.startsWith("-") ? `-${prefix}${key.slice(1)}` : `${prefix}${key}`;
+}
+
 /** Properties whose value comes from a clustered/snapped numeric or color scale (the two-pass token pipeline). */
 export const SCALE_PROPERTIES: Partial<Record<CapturedProperty, ScaleProperty>> = {
   width: { category: "spacing", prefix: "w-" },
   height: { category: "spacing", prefix: "h-" },
-  marginTop: { category: "spacing", prefix: "mt-" },
-  marginRight: { category: "spacing", prefix: "mr-" },
-  marginBottom: { category: "spacing", prefix: "mb-" },
-  marginLeft: { category: "spacing", prefix: "ml-" },
+  marginTop: { category: "spacing", prefix: "mt-", signAware: true },
+  marginRight: { category: "spacing", prefix: "mr-", signAware: true },
+  marginBottom: { category: "spacing", prefix: "mb-", signAware: true },
+  marginLeft: { category: "spacing", prefix: "ml-", signAware: true },
   paddingTop: { category: "spacing", prefix: "pt-" },
   paddingRight: { category: "spacing", prefix: "pr-" },
   paddingBottom: { category: "spacing", prefix: "pb-" },
   paddingLeft: { category: "spacing", prefix: "pl-" },
-  top: { category: "spacing", prefix: "top-" },
-  right: { category: "spacing", prefix: "right-" },
-  bottom: { category: "spacing", prefix: "bottom-" },
-  left: { category: "spacing", prefix: "left-" },
+  top: { category: "spacing", prefix: "top-", signAware: true },
+  right: { category: "spacing", prefix: "right-", signAware: true },
+  bottom: { category: "spacing", prefix: "bottom-", signAware: true },
+  left: { category: "spacing", prefix: "left-", signAware: true },
   fontSize: { category: "fontSize", prefix: "text-" },
   color: { category: "color", prefix: "text-" },
   backgroundColor: { category: "color", prefix: "bg-" },
