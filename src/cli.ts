@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { BrowserSession, UnsupportedBackendError } from "./browser/session.js";
 import { extractTree } from "./browser/extract.js";
+import { parseHeaders } from "./browser/headers.js";
 import { collectValues } from "./tokens/collect.js";
 import { buildTokenTable, DEFAULT_CLUSTER_OPTIONS } from "./tokens/cluster.js";
 import { loadThemeFromFile, loadThemeFromJson } from "./tokens/themeConfig.js";
@@ -11,19 +12,9 @@ import type { StockTheme } from "./tokens/stockTheme.js";
 import { assignClasses } from "./assign/assign.js";
 import { renderReportJson } from "./output/report.js";
 import { renderReconciledHtml } from "./output/html.js";
+import { redactUrl } from "./output/redact.js";
 import { renderTailwindConfigModule } from "./output/tailwindConfig.js";
 import type { ReconciliationReport } from "./model/types.js";
-
-function parseHeaders(headerArgs: string[]): Record<string, string> | undefined {
-  if (headerArgs.length === 0) return undefined;
-  const headers: Record<string, string> = {};
-  for (const arg of headerArgs) {
-    const sep = arg.indexOf(":");
-    if (sep === -1) throw new Error(`Invalid --cdp-header "${arg}" — expected "Key: Value"`);
-    headers[arg.slice(0, sep).trim()] = arg.slice(sep + 1).trim();
-  }
-  return headers;
-}
 
 const program = new Command();
 
@@ -83,7 +74,7 @@ program
       );
       const { classes, unhandled, suggestions } = assignClasses(tree, tokens);
 
-      const report: ReconciliationReport = { sourceUrl: url, selector: opts.selector, tree, tokens, classes, unhandled, suggestions, themeSource };
+      const report: ReconciliationReport = { sourceUrl: redactUrl(url), selector: opts.selector, tree, tokens, classes, unhandled, suggestions, themeSource };
 
       await mkdir(opts.out, { recursive: true });
       await writeFile(path.join(opts.out, "report.json"), renderReportJson(report));

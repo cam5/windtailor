@@ -58,6 +58,17 @@ windtailor writes three files to the output directory:
 - `tailwind.config.tokens.js` — new design tokens for any value that did not fit Tailwind's stock scale.
 - `reconciled.html` — the same node, now marked up with Tailwind classes.
 
+## Security
+
+windtailor points a browser at a page you do not control, so the page it scrapes is untrusted
+input. `reconciled.html` is **sanitized rather than faithful** — scripts, event-handler attributes
+and `javascript:` URLs from the source page are dropped, since you open that file from disk on a
+`file://` origin. The source URL is redacted before it is written to `report.json`. And
+`--theme-file` with a `.js`/`.cjs`/`.mjs` config executes that file's code by design, exactly as
+Tailwind's own CLI does — only point it at configs you trust.
+
+See [SECURITY.md](SECURITY.md) for the full trust model.
+
 ## Use it as a library
 
 windtailor also exports the function behind the suggestions engine. A script can call it directly, without going through the CLI.
