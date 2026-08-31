@@ -64,15 +64,28 @@ function resolveThemeObject(theme: unknown): StockTheme {
   return markCustomEntries(themeFromResolvedConfig(full));
 }
 
-/** .json is parsed as data; .js/.cjs/.mjs is dynamically imported, mirroring how Tailwind's own CLI loads user configs. */
+/** Executed by import(); everything else has to come through the .json data path or be rejected. */
+const EXECUTABLE_EXTENSIONS = new Set([".js", ".cjs", ".mjs"]);
+
+/**
+ * .json is parsed as data; .js/.cjs/.mjs is dynamically imported, mirroring how Tailwind's own CLI
+ * loads user configs — which means those three extensions run arbitrary code by design (see
+ * SECURITY.md). The allow-list is explicit rather than a `.json`-else-import() fallthrough so that
+ * a mistyped or unexpected path fails with a clear error instead of being handed to the module
+ * loader to execute or reject on its own terms.
+ */
 export async function loadThemeFromFile(filePath: string): Promise<StockTheme> {
   const ext = path.extname(filePath).toLowerCase();
   let parsed: unknown;
   if (ext === ".json") {
     parsed = JSON.parse(await readFile(filePath, "utf8"));
-  } else {
+  } else if (EXECUTABLE_EXTENSIONS.has(ext)) {
     const mod: unknown = await import(pathToFileURL(path.resolve(filePath)).href);
     parsed = (mod as { default?: unknown }).default ?? mod;
+  } else {
+    throw new Error(
+      `Unsupported --theme-file "${filePath}" — expected one of .json, .js, .cjs, .mjs (got "${ext || "no extension"}").`,
+    );
   }
   return resolveThemeObject(extractThemeValue(parsed));
 }

@@ -36,3 +36,18 @@ test("loading a real config-shaped .cjs file (module.exports = { theme: { extend
 test("malformed inline JSON throws rather than silently producing an empty theme", () => {
   assert.throws(() => loadThemeFromJson("{not valid json"));
 });
+
+test("a --theme-file with an unrecognized extension is rejected rather than handed to import()", async () => {
+  await assert.rejects(
+    () => loadThemeFromFile(path.join(fixturesDir, "not-a-theme.txt")),
+    (err: Error) => /\.json/.test(err.message) && /\.cjs/.test(err.message),
+    "expected an error naming the accepted extensions, not a module-loader error",
+  );
+});
+
+test("a --theme-file with no extension at all is rejected", async () => {
+  await assert.rejects(
+    () => loadThemeFromFile(path.join(fixturesDir, "not-a-theme")),
+    (err: Error) => /\.json/.test(err.message) && /\.cjs/.test(err.message),
+  );
+});

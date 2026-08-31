@@ -1,0 +1,5 @@
+This file exists only so themeConfig.test.ts can prove that --theme-file rejects an
+unrecognized extension by name, instead of handing the path to import() and letting the
+module loader decide what to do with it.
+
+module.exports = { theme: { extend: { colors: { "should-never-load": "#ff0000" } } } };

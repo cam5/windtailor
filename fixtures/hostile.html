@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  Fixture for the end-to-end sanitization check in SECURITY.md / html.test.ts. Everything inside
+  #card that could execute must be absent from the reconciled.html windtailor emits for it.
+-->
+<html>
+  <head>
+    <style>
+      #card { padding: 17px; background-color: #f3f4f6; border-radius: 33px; }
+      #card .cta { display: inline-block; margin-top: 14px; color: #111827; }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <script>window.__WINDTAILOR_PWNED__ = "exfiltrate-cookies";</script>
+      <img src="missing.png" onerror="window.__WINDTAILOR_PWNED__ = 'onerror'" alt="broken">
+      <a class="cta" href="javascript:alert('pwned')">Click me</a>
+      <a href="https://example.com/benign">Benign link</a>
+      <iframe src="https://example.com/frame"></iframe>
+      <style>@import url("https://evil.test/beacon.css"); #card > .cta { background: url("https://evil.test/pixel"); }</style>
+      <svg><a href="#"><animate attributeName="href" to="javascript:alert('pwned')"></animate></a></svg>
+      <p title="quote&quot; and &lt;bracket&gt;">Real content survives.</p>
+    </div>
+  </body>
+</html>
