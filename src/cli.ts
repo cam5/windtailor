@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { BrowserSession, UnsupportedBackendError } from "./browser/session.js";
 import { extractTree } from "./browser/extract.js";
@@ -13,6 +13,9 @@ import { renderReportJson } from "./output/report.js";
 import { renderReconciledHtml } from "./output/html.js";
 import { renderTailwindConfigModule } from "./output/tailwindConfig.js";
 import type { ReconciliationReport } from "./model/types.js";
+import { parseReport } from "./diff/loadReport.js";
+import { diffReports } from "./diff/diff.js";
+import { explainDiff } from "./diff/explain.js";
 
 function parseHeaders(headerArgs: string[]): Record<string, string> | undefined {
   if (headerArgs.length === 0) return undefined;
@@ -29,7 +32,11 @@ const program = new Command();
 
 program
   .name("windtailor")
-  .description("Fetch a webpage, capture a DOM node's computed styles, and reconcile them into Tailwind classes + generated design tokens.")
+  .description("Fetch a webpage, capture a DOM node's computed styles, and reconcile them into Tailwind classes + generated design tokens.");
+
+program
+  .command("reconcile", { isDefault: true })
+  .description("Reconcile one DOM node into Tailwind classes + generated design tokens (the default command).")
   .argument("<url>", "URL of the page to fetch — http(s):// or a local file:// path")
   .requiredOption("-s, --selector <selector>", "CSS selector for the target node")
   .option("-o, --out <dir>", "output directory", "./out")
@@ -117,6 +124,39 @@ program
       throw err;
     } finally {
       await session?.close();
+    }
+  });
+
+program
+  .command("diff")
+  .description("Explain what changed between two windtailor runs, in plain English — compares two report.json files, not source code.")
+  .argument("<before>", "path to the earlier run's report.json")
+  .argument("<after>", "path to the later run's report.json")
+  .option("--json", "emit the structured SemanticDiff instead of prose")
+  .option("-o, --out <file>", "write the output to a file instead of stdout")
+  .action(async (beforePath: string, afterPath: string, opts) => {
+    let before: ReconciliationReport;
+    let after: ReconciliationReport;
+    try {
+      [before, after] = await Promise.all([
+        readFile(beforePath, "utf8").then((json) => parseReport(json, beforePath)),
+        readFile(afterPath, "utf8").then((json) => parseReport(json, afterPath)),
+      ]);
+    } catch (err) {
+      // A missing or malformed report is ordinary user error, not a windtailor bug — no stack trace.
+      console.error(`Could not read the reports: ${(err as Error).message}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const diff = diffReports(before, after);
+    const output = opts.json ? JSON.stringify(diff, null, 2) : explainDiff(diff);
+
+    if (opts.out) {
+      await writeFile(opts.out, `${output}\n`);
+      console.log(`Wrote the diff to ${opts.out}`);
+    } else {
+      console.log(output);
     }
   });
 

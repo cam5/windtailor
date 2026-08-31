@@ -202,3 +202,85 @@ sequenceDiagram
     CLI-->>Dev: report.json (now matches the named token, fewer suggestions)
     Note over Dev,CLI: repeat for the next selector, or the next round of leftover suggestions
 ```
+
+## Explaining what changed between two runs
+
+Because windtailor is meant to be run again and again, the interesting question is usually not "what does this page look like now" but "what changed since last time". `windtailor diff` answers that in plain English.
+
+```sh
+windtailor diff <before>/report.json <after>/report.json
+```
+
+It compares two `report.json` files — the runs themselves, not your source code. Give it the same page before and after an edit, or the same page under two different `--theme-file` configs.
+
+Here is a real diff between a run of `fixtures/simple.html` and a run of the same card after its button's padding went from `9px 17px` to `24px 17px`, its background from `#111827` to `#1f2937`, and a new `<div>` was added underneath it:
+
+```
+1 node(s) restyled, 1 added, token debt down 1.
+
+Warning: The two runs read different pages (file:///…/fixtures/simple.html → file:///tmp/simple-v2.html). Everything below compares two different things.
+
+Structure
+  + 0.3 <div> is new.
+
+Styles
+  0.2 <div>
+    padding grew 9px → 24px (py-2 → py-6)
+    background shifted #111827 → #1f2937, a distinct color (bg-gray-900 → bg-gray-800)
+
+Tokens
+  24px now resolves to the theme's "6".
+  9px no longer appears on the page (it matched the theme's "2").
+  rgb(31, 41, 55) now resolves to the theme's "gray-800".
+  rgb(17, 24, 39) no longer appears on the page (it matched the theme's "gray-900").
+
+Token debt
+  clamped: 2 clamped value(s) resolved, 1 new clamped value(s) (22 → 21 total).
+```
+
+The first line is the headline — the whole diff in one sentence. Then four sections:
+
+- **Structure** — nodes that appeared, disappeared, or changed tag. Nodes are matched by the stable path id windtailor already uses (`0.2` is the third child of the target node), so this reads positionally.
+- **Styles** — what each node's classes now say, grouped by the design decision they express rather than by class string. `py-2` leaving and `py-6` arriving is *one* change to that node's padding, not two class edits. Direction and magnitude come from the computed values behind the classes, so the diff can say "grew 9px → 24px" even when both runs happened to land on the same token name, and can say "kept the same rendered values but the classes changed" when only the vocabulary moved.
+- **Tokens** — generated tokens minted, dropped or redefined; values that started or stopped matching the theme; and clamp distances that tightened or loosened.
+- **Token debt** — the compromises from `suggestions` and `unhandled`, netted out. `4 generated value(s) resolved (4 → 0 total)` means four values that used to need brand-new tokens are now covered.
+
+Warnings come first, before any section. If the two runs read different URLs, used different selectors, or ran against different themes, windtailor says so — it will still diff them, but node ids line up by position, not by identity.
+
+That last case is the point of the theme loop. Running the fixture once against stock Tailwind and once with `--theme-file fixtures/custom-theme.json` produces:
+
+```
+2 node(s) restyled, 1 token(s) dropped, token debt down 5.
+
+Warning: The theme changed (stock Tailwind → fixtures/custom-theme.json). Class names can differ even where the rendered value did not.
+
+Styles
+  0 <div>
+    background kept the same rendered values but the classes changed (bg-blue-500 → bg-brand-blue)
+  0.2 <div>
+    background kept the same rendered values but the classes changed (bg-gray-900 → bg-brand-ink)
+    corner radius kept the same rendered values but the classes changed (rounded-33 → rounded-pill)
+
+Tokens
+  rgb(58, 129, 245) moved from the theme's "blue-500" to "brand-blue".
+  rgb(17, 24, 39) moved from the theme's "gray-900" to "brand-ink".
+  rgb(58, 129, 245) is now an exact theme match (it used to snap 3 RGB units away).
+  radius token "33" (2.0625rem) is no longer minted — the theme covers that value now, or nothing uses it.
+  33px now resolves to the theme's "pill".
+```
+
+Nothing about the page moved a pixel. What moved is how much of it your own design system now accounts for: one fewer minted token, five fewer compromises.
+
+`--json` emits the structured `SemanticDiff` instead of prose, for a tool that wants to act on it. `--out <file>` writes to a file instead of stdout. The same engine is exported for programmatic use:
+
+```js
+import { parseReport, diffReports, explainDiff } from "windtailor";
+import { readFile } from "node:fs/promises";
+
+const before = parseReport(await readFile("before/report.json", "utf8"), "before/report.json");
+const after = parseReport(await readFile("after/report.json", "utf8"), "after/report.json");
+
+const diff = diffReports(before, after);
+console.log(diff.headline);
+console.log(explainDiff(diff));
+```
