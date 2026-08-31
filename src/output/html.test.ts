@@ -121,3 +121,29 @@ test("a void element still serializes without a closing tag", () => {
   const html = render(el("img", { src: "a.png" }));
   assert.equal(html, '<img src="a.png">');
 });
+
+test("a <style> element is dropped along with the CSS it carries", () => {
+  const html = render(
+    el("div", {}, [
+      el("style", {}, [text("@import url(http://evil.test/beacon.css); #card > .cta { background: url('http://evil.test/pixel?c=1') }")]),
+      text("kept"),
+    ]),
+  );
+
+  assert.ok(!html.includes("<style"), `expected <style> to be dropped, got: ${html}`);
+  assert.ok(!html.includes("evil.test"), "expected the CSS body to be dropped with the element — @import/url() fetch on open");
+  assert.ok(html.includes("kept"), "expected sibling content to survive");
+});
+
+test("SVG SMIL animation elements are dropped — they retarget href past the scheme allow-list", () => {
+  for (const tag of ["animate", "set", "animateTransform"]) {
+    const html = render(
+      el("svg", {}, [
+        el("a", { href: "#" }, [el(tag, { attributeName: "href", to: "javascript:alert(1)", values: "javascript:alert(1)" })]),
+      ]),
+    );
+
+    assert.ok(!new RegExp(`<${tag}`, "i").test(html), `expected <${tag}> to be dropped, got: ${html}`);
+    assert.ok(!/javascript/i.test(html), `expected the <${tag}> payload to be dropped, got: ${html}`);
+  }
+});

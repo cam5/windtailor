@@ -17,6 +17,8 @@
       <a class="cta" href="javascript:alert('pwned')">Click me</a>
       <a href="https://example.com/benign">Benign link</a>
       <iframe src="https://example.com/frame"></iframe>
+      <style>@import url("https://evil.test/beacon.css"); #card > .cta { background: url("https://evil.test/pixel"); }</style>
+      <svg><a href="#"><animate attributeName="href" to="javascript:alert('pwned')"></animate></a></svg>
       <p title="quote&quot; and &lt;bracket&gt;">Real content survives.</p>
     </div>
   </body>

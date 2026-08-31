@@ -20,8 +20,14 @@ its scripts — is hostile input. Everything below follows from that one line.
 which means it runs on a `file://` origin, where a surviving script has considerably more reach
 than it did on the original site. So the serializer in `src/output/html.ts` is a sanitizer:
 
-- `<script>`, `<iframe>`, `<object>`, `<embed>`, `<base>`, `<link>` and `<meta>` elements are
-  dropped along with their subtrees.
+- `<script>`, `<iframe>`, `<object>`, `<embed>`, `<base>`, `<link>`, `<meta>` and `<style>`
+  elements are dropped along with their subtrees. `<style>` is in that list because its `@import`
+  and `url()` rules fetch remote content the moment you open the file — a beacon channel sourced
+  from untrusted markup — and because its rules would otherwise re-apply the scraped page's own
+  styling over the reconciled Tailwind classes.
+- The SVG SMIL animation elements `<animate>`, `<set>` and `<animateTransform>` are dropped too.
+  They rewrite another element's attribute at runtime through `attributeName`/`to`/`values`, which
+  are not URL-valued attribute names, so the scheme allow-list below would never see the payload.
 - `on*` event-handler attributes (`onerror`, `onclick`, …) are stripped.
 - URL-bearing attributes (`href`, `src`, `srcset`, `action`, `formaction`, `poster`, `background`,
   `xlink:href`, …) are checked against a scheme allow-list: relative URLs, `http`, `https`,

@@ -9,8 +9,22 @@ const VOID_ELEMENTS = new Set([
  * i.e. on a file:// origin — so anything executable that survives serialization runs with local
  * privileges. These elements (and their subtrees) are dropped wholesale: they either execute
  * script, embed remote content, or rewrite how the rest of the document resolves URLs.
+ *
+ * `style` is here for all three reasons: its `@import` and `url()` rules fetch remote content the
+ * moment the file is opened, and its rules would re-apply the scraped page's own styling on top of
+ * the reconciled Tailwind classes — the same reason keepAttribute drops the `style` attribute.
+ *
+ * The SVG SMIL elements (`animate`, `set`, `animateTransform`) are here because they retarget
+ * another element's attribute at runtime via `attributeName`/`to`/`values`. None of those are
+ * URL-valued attribute *names*, so the scheme allow-list below never inspects them — dropping the
+ * elements is what closes that path.
+ *
+ * Entries are lowercase; the lookup lowercases too, since SVG tag names are case-sensitive and
+ * arrive camelCased (`animateTransform`) from anything that doesn't normalize the way extract.ts does.
  */
-const DROPPED_ELEMENTS = new Set(["script", "iframe", "object", "embed", "base", "link", "meta"]);
+const DROPPED_ELEMENTS = new Set([
+  "script", "iframe", "object", "embed", "base", "link", "meta", "style", "animate", "set", "animatetransform",
+]);
 
 /** Attributes whose value is a URL, and so need a scheme check rather than just escaping. */
 const URL_ATTRIBUTES = new Set([
@@ -75,7 +89,7 @@ function keepAttribute(name: string, value: string): boolean {
 
 function serializeNode(node: DomNode, classes: AssignedClasses): string {
   if (node.tag === "#text") return escapeText(node.textContent ?? "");
-  if (DROPPED_ELEMENTS.has(node.tag)) return "";
+  if (DROPPED_ELEMENTS.has(node.tag.toLowerCase())) return "";
 
   const attrParts: string[] = [];
   for (const [name, value] of Object.entries(node.attributes)) {
