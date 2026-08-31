@@ -51,6 +51,8 @@ windtailor <url> --selector <css-selector> --out <output-dir>
 - `--out` sets where windtailor writes its output. The default is `./out`.
 - `--cdp-endpoint` points windtailor at an existing CDP endpoint (e.g. Cloudflare's Kitesurf) instead of launching a local Chromium. `--cdp-header "Key: Value"` adds an auth header for that connection, and can repeat.
 - `--theme-file <path>` loads a custom Tailwind theme from a `.js`/`.cjs`/`.mjs`/`.json` config file — point it at a real project `tailwind.config.js`, or a minimal file with just a `theme`/`extend` object. `--theme-json <json>` takes the same shape inline instead. Pass only one.
+- `--executable-path <path>` points windtailor at a local browser binary to launch instead of letting puppeteer find one. It is ignored when `--cdp-endpoint` is set, since that connects to a browser somebody else is already running.
+- `--spacing-tol <px>`, `--radius-tol <px>`, `--font-size-tol <px>` and `--color-tol <n>` set how far a rendered value may sit from a scale entry and still snap to it instead of minting a new token. Their defaults are the ones in `DEFAULT_CLUSTER_OPTIONS`. Raise them for a smaller, coarser token set (more values get clamped onto the scale); lower them to keep values exact (more values get their own generated token).
 
 windtailor writes three files to the output directory:
 
@@ -202,3 +204,24 @@ sequenceDiagram
     CLI-->>Dev: report.json (now matches the named token, fewer suggestions)
     Note over Dev,CLI: repeat for the next selector, or the next round of leftover suggestions
 ```
+
+## Keeping the docs honest
+
+This README makes checkable claims about the code, so a checker verifies them:
+
+```sh
+npm run docs:check
+```
+
+It reads `README.md`, `src/cli.ts`, `src/index.ts` and `package.json` and reports six kinds of drift:
+
+- `undocumented-flag` — the CLI declares a flag this README never mentions.
+- `stale-flag` — this README documents a flag the CLI no longer declares.
+- `stale-export` — a library example imports a name `src/index.ts` does not export.
+- `output-file-mismatch` — the files the CLI writes and the files documented above disagree, in either direction.
+- `missing-path` — this README points at a repo file that is not there. Gitignored build output is skipped, so a fresh checkout passes before its first build.
+- `stale-npm-script` — this README says to run an `npm run` script `package.json` does not define.
+
+The rules live in `src/docs/drift.ts` as a pure function over strings; `src/docs/check.ts` is the thin wrapper that reads the files and sets the exit code. The test suite runs the checker against this repo's own files, so drift fails `npm test` and CI rather than going unnoticed.
+
+To leave something deliberately undocumented, put an HTML comment `<!-- doc-drift-ignore: <token> -->` anywhere in this README, where `<token>` is the flag, name, path or script the finding is about. The exemption then lives next to the doc it applies to instead of in an allowlist inside the checker.

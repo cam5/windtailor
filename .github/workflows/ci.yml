@@ -23,6 +23,8 @@ jobs:
 
       - run: npm run typecheck
 
+      - run: npm run docs:check
+
       - run: npm run build
 
       - run: npm test
